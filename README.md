@@ -37,9 +37,7 @@ repository root**:
 - `pdb/`
   - One or more PDB files: `*.pdb` (used to locate chains and for ChimeraX analysis).
   - One or more nucleotide files: `*.fna` (used to extract codon sequences).
-- `running/running.txt`
-  - A text file used by `script1.py` for UI status. The ChimeraX script overwrites
-    this file during execution.
+
 - `script/`
   - `script.py` expects to run under ChimeraX with the substructure below:
     - `script/input/` (generated inputs like `input.csv` and `codon.txt`).
