@@ -6,69 +6,47 @@ This bioinformatics pipeline is designed to identify protein residues that are m
 
 Key features:
 
-Extract codon sequences from user-provided protein sequences.
-
-Identify protein chains and map PDB entries to standard protein names.
-
-Calculate solvent-accessible surface area for each residue using ChimeraX.
-
-Perform in silico amino acid substitutions (ARG and TRP) to detect steric clashes.
-
-Generate processed CSV files with ranked residues for mutational tolerance.
-
-Provide logging of all actions and errors for reproducibility.
+- Extract codon sequences from user-provided protein sequences.
+- Identify protein chains and map PDB entries to standard protein names.
+- Calculate solvent-accessible surface area for each residue using ChimeraX.
+- Perform in silico amino acid substitutions (ARG and TRP) to detect steric clashes.
+- Generate processed CSV files with ranked residues for mutational tolerance.
+- Provide logging of all actions and errors for reproducibility.
 
 Pipeline Workflow
 
-Preparation and Input Parsing (input_file.py)
+1. Preparation and Input Parsing (input_file.py)
 
-Reads a list of standard proteins from Protein list.csv.
+- Reads a list of standard proteins from Protein list.csv.
+- Extracts codon sequences from .fna files in the pdb/ directory.
+- Identifies protein chains and PDB file names from .pdb files.
+- Creates input/input.csv containing [chain, protein_name, PDB_file].
 
-Extracts codon sequences from .fna files in the pdb/ directory.
-
-Identifies protein chains and PDB file names from .pdb files.
-
-Creates input/input.csv containing [chain, protein_name, PDB_file].
-
-ChimeraX Structural Analysis (script.py)
-
-Prepares workspace by clearing old output files and creating necessary subfolders.
-
-Opens each PDB structure in ChimeraX and measures SASA for all residues (sasa_function).
-
-Performs residue substitutions to TRP and ARG and records steric clashes (clashes_function_TRP & clashes_function_ARG).
-
-Calls pandas2.py to convert clash and exposure data into a structured CSV.
-
-Codon and Exposure Mapping (pandas2.py)
-
-Assigns codons to amino acids in the protein sequence.
-
-Merges codon sequences with SASA and clash data.
-
-Generates a raw CSV file with residue information for each protein.
+2. ChimeraX Structural Analysis (script.py)
+- Prepares workspace by clearing old output files and creating necessary subfolders.
+- Opens each PDB structure in ChimeraX and measures SASA for all residues (sasa_function).
+- Performs residue substitutions to TRP and ARG and records steric clashes (clashes_function_TRP & clashes_function_ARG).
+- Calls pandas2.py to convert clash and exposure data into a structured CSV.
 
 Data Processing (pandas_script.py)
-
-Extracts residue names and exposure values from ChimeraX output.
-
-Combines clash data from TRP and ARG substitutions.
-
-Produces a final CSV file in best_residues/modified_data/ containing:
-
-Residue number
-
-Amino acid
-
-ARG and TRP clash counts
-
-Solvent exposure
-
+- Extracts residue names and exposure values from ChimeraX output.
+- Combines clash data from TRP and ARG substitutions.
+- Produces a final CSV file in best_residues/modified_data/ containing:
+  x Residue number
+  x Amino acid
+  x ARG and TRP clash counts
+  x Solvent exposure
 Clash sum
-
 Sanity check against original sequence
+- Residues are filtered and ranked by minimal clashes and maximal exposure.
 
-Residues are filtered and ranked by minimal clashes and maximal exposure.
+4. Codon and Exposure Mapping (pandas2.py)
+- Integrates nucleotide sequences and structural data.
+- Automatically filters residues unsuitable for mutation.
+- Performs sanity checks to ensure sequence alignment.
+- Prioritizes residues with low clash counts and high solvent exposure.
+
+
 
 User Interface / Monitoring (script1.py)
 
