@@ -1,6 +1,6 @@
 # ChimeraX Amino-Acid Substitution Pipeline
 
-This repository contains a ChimeraX-driven pipeline to evaluate residue tolerance for amino‑acid substitutions in proteins. It combines ChimeraX structural calculations (SASA and clash counts) with sequence‑level codon checks to generate ranked residue lists that are more likely to tolerate substitutions.
+This repository contains a ChimeraX-driven pipeline to evaluate residue tolerance for amino‑acid substitutions in proteins. It combines ChimeraX structural calculations (SASA and clash counts) with sequence‑level codon checks and generates ranked residue lists that likely to tolerate bulky substitutions.
 
 ## Pipeline
 
