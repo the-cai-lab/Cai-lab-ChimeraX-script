@@ -1,119 +1,103 @@
-Finding Substitution-Tolerant Residues in Proteins using ChimeraX
+# ChimeraX Amino-Acid Substitution Pipeline
 
-Overview
+This repository contains a ChimeraX-driven pipeline to evaluate residue tolerance for amino‑acid substitutions in proteins. It combines ChimeraX structural calculations (SASA and clash counts) with sequence‑level codon checks to generate ranked residue lists that are more likely to tolerate substitutions.
 
-This bioinformatics pipeline is designed to identify protein residues that are most likely to tolerate amino acid substitutions with minimal structural clashes. It leverages ChimeraX to calculate solvent-accessible surface areas (SASA) and assess steric clashes when substituting residues with arginine (ARG) or tryptophan (TRP). The pipeline integrates sequence data from .fna files and structural data from .pdb files to generate a ranked list of residues suitable for mutagenesis studies.
+## Pipeline
 
-Key features:
+1. **Build input lists** (`input_file.py`)
+   - Reads `Protein list.csv` and scans local `.pdb` and `.fna` files in `pdb/`.
+   - Extracts chain IDs and PDB identifiers, writes `script/input/input.csv`.
+   - Builds `script/input/codon.txt` by extracting codon sequences from `.fna`.
 
-- Extract codon sequences from user-provided protein sequences.
-- Identify protein chains and map PDB entries to standard protein names.
-- Calculate solvent-accessible surface area for each residue using ChimeraX.
-- Perform in silico amino acid substitutions (ARG and TRP) to detect steric clashes.
-- Generate processed CSV files with ranked residues for mutational tolerance.
-- Provide logging of all actions and errors for reproducibility.
+2. **Run ChimeraX analysis** (`script.py`)
+   - Opens each PDB via ChimeraX, selects the target chain, and measures SASA.
+   - Saves residue names and SASA to `script/script_content/sasa/*.defattr`.
+   - Iterates through residues, swaps each to TRP/ARG, and writes clash counts to
+     `script/script_content/residues_trp/` and `script/script_content/residues_arg/`.
+   - Triggers the post‑processing scripts (`pandas_script.py`, `pandas2.py`).
 
-Pipeline Workflow
+3. **Post-process outputs** (`pandas_script.py`, `pandas2.py`)
+   - Converts ChimeraX `.defattr` files to CSV.
+   - Combines SASA, clash counts, and residue names.
+   - Aligns residue names with codon-derived amino acids (sanity check).
+   - Filters/filters residues and writes ranked outputs.
 
-1. Preparation and Input Parsing (input_file.py)
+4. **Progress display** (`script1.py`)
+   - Reads `running/running.txt` and `script/script_content/Protein_name/name.txt`
+     to show a live terminal status during processing.
 
-- Reads a list of standard proteins from Protein list.csv.
-- Extracts codon sequences from .fna files in the pdb/ directory.
-- Identifies protein chains and PDB file names from .pdb files.
-- Creates input/input.csv containing [chain, protein_name, PDB_file].
+## Required Inputs
 
-2. ChimeraX Structural Analysis (script.py)
-- Prepares workspace by clearing old output files and creating necessary subfolders.
-- Opens each PDB structure in ChimeraX and measures SASA for all residues (sasa_function).
-- Performs residue substitutions to TRP and ARG and records steric clashes (clashes_function_TRP & clashes_function_ARG).
-- Calls pandas2.py to convert clash and exposure data into a structured CSV.
+At minimum, the pipeline expects the following files and folders **relative to the
+repository root**:
 
-Data Processing (pandas_script.py)
-- Extracts residue names and exposure values from ChimeraX output.
-- Combines clash data from TRP and ARG substitutions.
-- Produces a final CSV file in best_residues/modified_data/ containing:
-  x Residue number
-  x Amino acid
-  x ARG and TRP clash counts
-  x Solvent exposure
-Clash sum
-Sanity check against original sequence
-- Residues are filtered and ranked by minimal clashes and maximal exposure.
+- `Protein list.csv`
+  - A CSV containing one or more protein identifiers (one row with comma‑separated
+    names or multiple rows; the scripts iterate all cells).
+- `pdb/`
+  - One or more PDB files: `*.pdb` (used to locate chains and for ChimeraX analysis).
+  - One or more nucleotide files: `*.fna` (used to extract codon sequences).
+- `running/running.txt`
+  - A text file used by `script1.py` for UI status. The ChimeraX script overwrites
+    this file during execution.
+- `script/`
+  - `script.py` expects to run under ChimeraX with the substructure below:
+    - `script/input/` (generated inputs like `input.csv` and `codon.txt`).
+    - `script/script_content/` (temporary outputs and intermediate files).
+    - `script/subscripts/` containing `input_file.py`, `pandas_script.py`,
+      `pandas2.py`, and `script1.py`.
 
-4. Codon and Exposure Mapping (pandas2.py)
-- Integrates nucleotide sequences and structural data.
-- Automatically filters residues unsuitable for mutation.
-- Performs sanity checks to ensure sequence alignment.
-- Prioritizes residues with low clash counts and high solvent exposure.
+> **Note:** The scripts derive paths using `sys.argv[0]` and assume the
+> `script/` directory structure above. If you run them from another location,
+> adjust paths or mirror the expected layout.
 
+## Outputs
 
+Primary results are written to:
 
-User Interface / Monitoring (script1.py)
+- `best_residues/raw_data/<protein>.csv`
+  - Combined data per residue: residue index, name, SASA exposure, TRP/ARG clashes,
+    sanity check columns, and clash sums.
+- `best_residues/modified_data/<protein>.csv`
+  - Filtered and sorted residues (best candidates near top) based on:
+    - low clash counts,
+    - high SASA exposure,
+    - and sequence sanity checks.
 
-Provides a live terminal progress animation showing current protein and residue being analyzed.
+Intermediate / auxiliary outputs:
 
-Monitors pipeline completion via running.txt status.
+- `script/script_content/sasa/*.defattr` (ChimeraX attribute outputs)
+- `script/script_content/csvs/attrcalc.csv` and `Residues.csv`
+- `script/script_content/Clashes/*.txt`
+- `script/script_content/codons/codon2.txt`
+- `action_log.txt` and `error_log.txt`
 
-Required Input Files
+## How to Run
 
-Protein List
+1. Ensure the required input files and folders exist (see **Required Inputs**).
+2. Launch ChimeraX and run `script.py` from within the ChimeraX environment.
+   - The script calls the other Python helpers automatically.
 
-Protein list.csv — A CSV file with a list of standard protein names to be analyzed.
+Example (inside ChimeraX Python console):
 
-Protein Sequences
+```python
+run(session, "open /path/to/repo/script/script.py")
+```
 
-.fna files in the pdb/ folder — GenBank-style nucleotide sequences for the proteins of interest.
+## Notes and Assumptions
 
-Protein Structures
+- Only the **first chain** detected for a protein is analyzed.
+- Clash thresholds and filtering are hard-coded in `pandas2.py`:
+  - drops residues with clash sum > 3
+  - drops residues with exposure < 20
+  - trims the last 20 residues of the sequence
+- If the codon-derived sequence and PDB-derived sequence do not align, the
+  pipeline records a warning in `error_log.txt` and flags the sanity check.
 
-.pdb files in the pdb/ folder — Structural data from the Protein Data Bank.
+## Script Map
 
-ChimeraX Environment
-
-The pipeline requires ChimeraX installed to perform SASA calculations and residue swaps.
-
-Output Files
-
-Intermediate Files
-
-input/codon.txt — Codon sequences extracted from .fna files.
-
-input/input.csv — Mapping of protein chain, protein name, and PDB file.
-
-script_content/sasa/ — SASA attribute files for each protein.
-
-script_content/residues_arg/ & script_content/residues_trp/ — Clash data for ARG and TRP substitutions.
-
-script_content/codons/codon2.txt — Amino acid sequence mapped from codons.
-
-script_content/csvs/ — Intermediate CSVs generated from ChimeraX attribute files.
-
-Final Output
-
-best_residues/raw_data/<protein>.csv — Raw merged data combining clash and exposure information.
-
-best_residues/modified_data/<protein>.csv — Filtered and ranked list of residues most tolerant to substitution.
-
-Columns include:
-
-Residue: residue number
-
-Name: amino acid
-
-ARG: number of clashes with arginine
-
-TRP: number of clashes with tryptophan
-
-Exposure: solvent-accessible surface area
-
-clash sum: total clashes
-
-Sanity_check: validation of residue identity with .fna sequence
-
-Logs
-
-action_log.txt — Records start, completion, and progress of protein analyses.
-
-error_log.txt — Captures errors encountered during the pipeline execution.
-
-running/running.txt — Status file for UI and monitoring.
+- `input_file.py`: Build `input.csv` and `codon.txt` from `Protein list.csv` and `pdb/`.
+- `script.py`: Main ChimeraX driver (SASA + clashes + orchestration).
+- `pandas_script.py`: Convert SASA `.defattr` to CSV + residue list.
+- `pandas2.py`: Merge, sanity check, filter, and rank residues.
+- `script1.py`: CLI progress display for long runs.
